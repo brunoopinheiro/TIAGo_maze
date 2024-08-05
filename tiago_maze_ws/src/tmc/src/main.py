@@ -1,6 +1,7 @@
-#! shebang
+#! /usr/bin/python3
 
 import rospy
+
 
 class myRobot():
 
@@ -33,6 +34,7 @@ class myRobot():
     def decision(self):
         print('decision')
         #
+
 
 if __name__ == '__main__':
 

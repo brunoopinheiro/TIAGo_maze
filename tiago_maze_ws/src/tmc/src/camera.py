@@ -1,9 +1,10 @@
-#! shebang
+#! /usr/bin/python3
 
 import rospy
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
+
 
 class myCamera():
 
@@ -13,7 +14,11 @@ class myCamera():
         self.bridge = CvBridge()
 
         # Subscriber to the camera image
-        self.image_sub = rospy.Subscriber("/xtion/rgb/image_color",Image,self.imageCallBack)
+        self.image_sub = rospy.Subscriber(
+            "/xtion/rgb/image_color",
+            Image,
+            self.imageCallBack,
+        )
 
         # Server Service camera
         # ...

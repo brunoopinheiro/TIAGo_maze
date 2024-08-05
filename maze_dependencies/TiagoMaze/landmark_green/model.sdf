@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="landmark_green">
+    <static>true</static>
+    <link name="link">
+      <pose>0 0 0 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>1e-5 0.9 0.9</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+         <geometry>
+           <box>
+            <size>1e-5 0.9 0.9</size>
+          </box>
+         </geometry>
+        <material>
+          <script>
+            <uri>model://landmark_green/materials/scripts</uri>
+	          <uri>model://landmark_green/materials/textures</uri>
+            <name>cube2/qr</name>
+          </script>
+        </material>
+       </visual>
+    </link>
+    <link name="linkblack">
+      <pose>1e-3 0 0 0 0 0</pose>
+      <collision name="collisionblack">
+        <geometry>
+          <box>
+            <size>1e-3 0.9 0.9</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visualblack">
+         <geometry>
+           <box>
+            <size>1e-3 0.9 0.9</size>
+          </box>
+         </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+       </visual>
+    </link>
+  </model>
+</sdf>

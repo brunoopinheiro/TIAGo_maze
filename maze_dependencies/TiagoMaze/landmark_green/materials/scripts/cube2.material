@@ -1,0 +1,14 @@
+material cube2/qr
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture green.png
+        scale 1 1
+      }
+    }
+  }
+}

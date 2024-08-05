@@ -1,0 +1,14 @@
+material cube/qr
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture red.jpeg
+        scale 1 1
+      }
+    }
+  }
+}

@@ -1,26 +1,41 @@
 #! /usr/bin/python3
 
 import rospy
-from math import inf
-from base_mover import BaseMover
-from range_finder import RangeFinder
+from math import inf, radians
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
 from typing import Tuple
+
+
+LASER_SUB_TOPIC = '/scan_raw'
+BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
 
 
 class myRobot():
 
     @property
     def laser_values(self) -> Tuple[float, float, float]:
-        return (self.__laser.v270, self.__laser.v0, self.__laser.v90)
+        return (self.v270, self.v0, self.v90)
 
     def __init__(self):
-        print('init')
         # Subscriber odometria
         # Subscriber laser
-        self.__laser = RangeFinder()
+        self.v90 = inf
+        self.v270 = inf
+        self.v0 = inf
+        self.sub = rospy.Subscriber(
+            LASER_SUB_TOPIC,
+            LaserScan,
+            self.callback_laser,
+            queue_size=1,
+        )
         # Client Service camera
         # Publisher base
-        self.__base = BaseMover()
+        self.base_pub = rospy.Publisher(
+            BASE_CONT_TOPIC,
+            Twist,
+            queue_size=1,
+        )
         # Publisher cabeca
         # self._adjust_pose()
 
@@ -28,14 +43,46 @@ class myRobot():
         print('callback odometria')
         # Armazenar os dados de odometria
 
-    def callback_laser(self, msg):
-        print('callback laser')
-        # Armazenar os dados do laser
+    def __idx_from_angle(self, angle, msg):
+        return int((radians(angle) - msg.angle_min)/msg.angle_increment)
 
-    def moveStaright(self):
-        print('move straight')
-        # error = ...
-        # while(abs(error) < value):
+    def callback_laser(self, msg):
+        idx_90 = self.__idx_from_angle(90, msg)
+        idx_m90 = self.__idx_from_angle(-90, msg)
+        idx_0 = self.__idx_from_angle(0, msg)
+        self.v90 = msg.ranges[idx_90]
+        self.v270 = msg.ranges[idx_m90]
+        self.v0 = msg.ranges[idx_0]
+        print(self.v0)
+
+    def move_base(
+            self,
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            roll=0.0,
+            pitch=0.0,
+            yaw=0.0,
+    ) -> None:
+        new_pose = Twist()
+        new_pose.linear.x = x
+        new_pose.linear.y = y
+        new_pose.linear.z = z
+        new_pose.angular.x = roll
+        new_pose.angular.y = pitch
+        new_pose.angular.z = yaw
+        self.base_pub.publish(new_pose)
+
+    def move_straight(self):
+        threshold = 0.7
+        while (self.v0 - threshold) > 0:
+            move = self.v0 - threshold
+            print('Move: ', move)
+            if move > 0.3:
+                move = 0.3
+            if move < 0.01:
+                move = 0.01
+            self.move_base(x=move)
 
     def turn(self, sens):
         print('turn')
@@ -67,7 +114,9 @@ if __name__ == '__main__':
 
     state = 0
     # while not rospy.is_shutdown():
-    #     print(tiago.laser_values)
+    print(tiago.laser_values)
+    tiago.move_straight()
+    # rospy.spin()
      # if state == 0:
         # decision
         # compute next state

@@ -44,6 +44,17 @@ class myRobot():
         # Armazenar os dados de odometria
 
     def __idx_from_angle(self, angle, msg):
+        """Receives an angle and the message, and calculates
+        the index from the message that corresponds to that
+        angle.
+
+        Args:
+            angle (float): the angle in degrees
+            msg (LaserScan): The LaserScan message
+
+        Returns:
+            int: the index for LaserScan.ranges
+        """
         return int((radians(angle) - msg.angle_min)/msg.angle_increment)
 
     def callback_laser(self, msg):
@@ -53,27 +64,31 @@ class myRobot():
         self.v90 = msg.ranges[idx_90]
         self.v270 = msg.ranges[idx_m90]
         self.v0 = msg.ranges[idx_0]
-        print(self.v0)
 
     def move_base(
             self,
             x=0.0,
-            y=0.0,
-            z=0.0,
-            roll=0.0,
-            pitch=0.0,
             yaw=0.0,
     ) -> None:
+        """Moves the TIAGo base in the `x` or `yaw` refferences
+        the given velocity (m/s).
+
+        Args:
+            x (float, optional): The desired velocity.
+                Defaults to 0.0.
+            yaw (float, optional): The desired velocity.
+                Defaults to 0.0.
+        """
         new_pose = Twist()
         new_pose.linear.x = x
-        new_pose.linear.y = y
-        new_pose.linear.z = z
-        new_pose.angular.x = roll
-        new_pose.angular.y = pitch
         new_pose.angular.z = yaw
         self.base_pub.publish(new_pose)
 
     def move_straight(self):
+        """Moves the TIAGo robot in a straight line until
+        it reaches 0.7 meters from a wall, detected by its
+        scan (oriented by its 0 degrees laser).
+        """
         threshold = 0.7
         while (self.v0 - threshold) > 0:
             move = self.v0 - threshold
@@ -92,18 +107,6 @@ class myRobot():
     def decision(self):
         print('decision')
         #
-
-    def _adjust_pose(self):
-        while inf in self.laser_values:
-            self.__base.adjust_pose(yaw=-0.6)
-
-        diff = self.laser_values[0] - self.laser_values[2]
-        while diff >= 0.01:
-            if diff > 0.1 or diff < 0.1:
-                diff = 0.1
-            self.__base.adjust_pose(yaw=diff)
-            diff = self.laser_values[0] - self.laser_values[2]
-        print(self.laser_values[0] - self.laser_values[2])
 
 
 if __name__ == '__main__':

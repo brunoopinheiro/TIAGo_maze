@@ -4,11 +4,13 @@ import rospy
 from math import inf, radians
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
+from control_msgs.msg import PointHeadActionGoal
 from typing import Tuple
 
 
 LASER_SUB_TOPIC = '/scan_raw'
 BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
+HEAD_CONTROLLER_TOPIC = '/head_controller/point_head_action/goal'
 
 
 class myRobot():
@@ -37,6 +39,11 @@ class myRobot():
             queue_size=1,
         )
         # Publisher cabeca
+        self.head_pub = rospy.Publisher(
+            HEAD_CONTROLLER_TOPIC,
+            PointHeadActionGoal,
+            queue_size=1,
+        )
         # self._adjust_pose()
 
     def callback_odometria(self, msg):
@@ -58,6 +65,14 @@ class myRobot():
         return int((radians(angle) - msg.angle_min)/msg.angle_increment)
 
     def callback_laser(self, msg):
+        """Callback used to update the robot's scanner
+        sensors. Updates the values stored in the
+        `v90`, `v270` and `v0` properties.
+
+        Args:
+            msg (LaserScan): The message read from
+            the `/scan_raw` topic.
+        """
         idx_90 = self.__idx_from_angle(90, msg)
         idx_m90 = self.__idx_from_angle(-90, msg)
         idx_0 = self.__idx_from_angle(0, msg)
@@ -99,6 +114,15 @@ class myRobot():
                 move = 0.01
             self.move_base(x=move)
 
+    def move_head(self):
+        r = rospy.Rate(10)
+        phag = PointHeadActionGoal()
+        phag.goal.max_velocity = 1.0
+        phag.goal.min_duration = rospy.Duration(0.2)
+        phag.goal. = 10.0
+        self.head_pub.publish(phag)
+        r.sleep()
+
     def turn(self, sens):
         print('turn')
         # error = ...
@@ -118,7 +142,8 @@ if __name__ == '__main__':
     state = 0
     # while not rospy.is_shutdown():
     print(tiago.laser_values)
-    tiago.move_straight()
+    # tiago.move_straight()
+    tiago.move_head()
     # rospy.spin()
      # if state == 0:
         # decision

@@ -3,13 +3,18 @@
 import rospy
 from math import inf, radians
 from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseWithCovariance
+from geometry_msgs.msg import Pose
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from typing import Tuple
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+
 
 
 LASER_SUB_TOPIC = '/scan_raw'
 BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
-
+BASE_ORIENT_TOPIC = '/mobile_base_controller/odom'
 
 class myRobot():
 
@@ -19,11 +24,18 @@ class myRobot():
 
     def __init__(self):
         # Subscriber odometria
+        self.sub_odom = rospy.Subscriber(
+            BASE_ORIENT_TOPIC,
+            Odometry,
+            self.callback_odometry,
+            queue_size=1,
+        )
+        self.yaw = 0.0
         # Subscriber laser
         self.v90 = inf
         self.v270 = inf
         self.v0 = inf
-        self.sub = rospy.Subscriber(
+        self.sub_laser = rospy.Subscriber(
             LASER_SUB_TOPIC,
             LaserScan,
             self.callback_laser,
@@ -39,8 +51,11 @@ class myRobot():
         # Publisher cabeca
         # self._adjust_pose()
 
-    def callback_odometria(self, msg):
-        print('callback odometria')
+    def callback_odometry(self, msg):
+        quat = msg.pose.pose.orientation
+        quat_list = [quat.x,quat.y,quat.z,quat.w]
+        (roll,pitch,yaw) = euler_from_quaternion(quat_list)
+        self.yaw = yaw        
         # Armazenar os dados de odometria
 
     def __idx_from_angle(self, angle, msg):
@@ -92,7 +107,6 @@ class myRobot():
         threshold = 0.7
         while (self.v0 - threshold) > 0:
             move = self.v0 - threshold
-            print('Move: ', move)
             if move > 0.3:
                 move = 0.3
             if move < 0.01:
@@ -118,7 +132,7 @@ if __name__ == '__main__':
     state = 0
     # while not rospy.is_shutdown():
     print(tiago.laser_values)
-    tiago.move_straight()
+    # tiago.move_straight()
     # rospy.spin()
      # if state == 0:
         # decision

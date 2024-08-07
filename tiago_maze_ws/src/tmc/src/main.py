@@ -3,20 +3,17 @@
 import rospy
 from math import inf, radians
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import PoseWithCovariance
-from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from control_msgs.msg import PointHeadActionGoal
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from typing import Tuple
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
-
+from tf.transformations import euler_from_quaternion
 
 
 LASER_SUB_TOPIC = '/scan_raw'
 BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
 BASE_ORIENT_TOPIC = '/mobile_base_controller/odom'
-HEAD_CONTROLLER_TOPIC = '/head_controller/point_head_action/goal'
+HEAD_CONTROLLER_TOPIC = '/head_controller/command'
 
 
 class myRobot():
@@ -54,16 +51,16 @@ class myRobot():
         # Publisher cabeca
         self.head_pub = rospy.Publisher(
             HEAD_CONTROLLER_TOPIC,
-            PointHeadActionGoal,
+            JointTrajectory,
             queue_size=1,
         )
         # self._adjust_pose()
 
     def callback_odometry(self, msg):
         quat = msg.pose.pose.orientation
-        quat_list = [quat.x,quat.y,quat.z,quat.w]
-        (roll,pitch,yaw) = euler_from_quaternion(quat_list)
-        self.yaw = yaw        
+        quat_list = [quat.x, quat.y, quat.z, quat.w]
+        (_, _, yaw) = euler_from_quaternion(quat_list)
+        self.yaw = yaw
         # Armazenar os dados de odometria
 
     def __idx_from_angle(self, angle, msg):
@@ -130,13 +127,12 @@ class myRobot():
             self.move_base(x=move)
 
     def move_head(self):
-        r = rospy.Rate(10)
-        phag = PointHeadActionGoal()
-        phag.goal.max_velocity = 1.0
-        phag.goal.min_duration = rospy.Duration(0.2)
-        phag.goal. = 10.0
-        self.head_pub.publish(phag)
-        r.sleep()
+        jt = JointTrajectory()
+        jt.joint_names = ['head_1_joint', 'head_2_joint']
+        point = JointTrajectoryPoint()
+        point.positions = [1.0, 1.0]
+        jt.points.append(point)
+        self.head_pub.publish(jt)
 
     def turn(self, sens):
         print('turn')

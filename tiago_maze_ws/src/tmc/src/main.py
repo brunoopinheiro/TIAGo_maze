@@ -5,15 +5,17 @@ from math import inf, radians
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from typing import Tuple
 from tf.transformations import euler_from_quaternion
+from control_msgs.msg import PointHeadAction, PointHeadGoal
+from actionlib import SimpleActionClient
 
 
 LASER_SUB_TOPIC = '/scan_raw'
 BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
 BASE_ORIENT_TOPIC = '/mobile_base_controller/odom'
-HEAD_CONTROLLER_TOPIC = '/head_controller/command'
+# Action Controller
+HEAD_CONTROLLER_TOPIC = '/head_controller/point_head_action'
 
 
 class myRobot():
@@ -49,10 +51,9 @@ class myRobot():
             queue_size=1,
         )
         # Publisher cabeca
-        self.head_pub = rospy.Publisher(
+        self.head_ac = SimpleActionClient(
             HEAD_CONTROLLER_TOPIC,
-            JointTrajectory,
-            queue_size=1,
+            PointHeadAction,
         )
         # self._adjust_pose()
 
@@ -126,13 +127,31 @@ class myRobot():
                 move = 0.01
             self.move_base(x=move)
 
-    def move_head(self):
-        jt = JointTrajectory()
-        jt.joint_names = ['head_1_joint', 'head_2_joint']
-        point = JointTrajectoryPoint()
-        point.positions = [1.0, 1.0]
-        jt.points.append(point)
-        self.head_pub.publish(jt)
+    def move_head(self, x=1.0, y=0.0, z=1.1, block=False):
+        """Moves the TIAGo head to a given x, y, z point.
+        The y value makes the TIAGo look to the left or right.
+        A negative value means left, a positive value means right.
+        Args:
+            x (float, optional): Foward. Defaults to 1.0.
+            y (float, optional): Left/Right. Defaults to 0.0.
+            z (float, optional): Height. Defaults to 1.1.
+            block (bool, optional): Blocks the code.
+        """
+        rospy.sleep(0.5)
+        goal = PointHeadGoal()
+        goal.pointing_frame = 'xtion_optical_frame'
+        goal.pointing_axis.z = 1.0
+        goal.max_velocity = 1.5
+        goal.min_duration = rospy.Duration(0.5)
+        goal.target.header.frame_id = 'base_link'
+        goal.target.point.x = x
+        goal.target.point.y = y
+        goal.target.point.z = z
+        if block is False:
+            self.head_ac.send_goal(goal)
+        else:
+            self.head_ac.send_goal_and_wait(goal)
+        rospy.sleep(0.5)
 
     def turn(self, sens):
         print('turn')
@@ -154,7 +173,14 @@ if __name__ == '__main__':
     # while not rospy.is_shutdown():
     print(tiago.laser_values)
     # # tiago.move_straight()
-    tiago.move_head()
+    tiago.move_head(y=1.5)
+    rospy.sleep(1)
+    tiago.move_head(x=1.0)
+    rospy.sleep(1)
+    tiago.move_head(y=-1.5)
+    rospy.sleep(1)
+    tiago.move_head(x=1.0)
+    rospy.sleep(1)
     # rospy.spin()
      # if state == 0:
         # decision

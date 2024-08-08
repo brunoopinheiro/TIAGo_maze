@@ -35,9 +35,9 @@ laser.
 Cada etapa deve ser validada pelo professor
 - [X] Fornecer as distâncias calculadas pelo laser a -90, 0 e 90 graus.
 - [X] Realizar o movimento em linha reta.
-- [ ] Fornecer a orientação do robô (o valor deve ser contı́nuo).
+- [X] Fornecer a orientação do robô (o valor deve ser contı́nuo).
 - [ ] Realizar as rotações da base móvel.
-- [ ] Realizar as rotações da cabeça.
+- [X] Realizar as rotações da cabeça.
 - [ ] Processar as imagens.
 - [ ] Controlar o braço para fazer um sinal
 - [ ] Implementar uma maquina de estado.

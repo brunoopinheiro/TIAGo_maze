@@ -10,7 +10,8 @@ project(tmc)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  standard_msgs
+  std_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions

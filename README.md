@@ -35,9 +35,9 @@ laser.
 Cada etapa deve ser validada pelo professor
 - [X] Fornecer as distâncias calculadas pelo laser a -90, 0 e 90 graus.
 - [X] Realizar o movimento em linha reta.
-- [ ] Fornecer a orientação do robô (o valor deve ser contı́nuo).
+- [X] Fornecer a orientação do robô (o valor deve ser contı́nuo).
 - [ ] Realizar as rotações da base móvel.
-- [ ] Realizar as rotações da cabeça.
+- [X] Realizar as rotações da cabeça.
 - [ ] Processar as imagens.
 - [ ] Controlar o braço para fazer um sinal
 - [ ] Implementar uma maquina de estado.
@@ -72,3 +72,17 @@ roslaunch tiago gazebo tiago gazebo.launch public sim:=true robot:=titanium worl
 - Os programas (pacotes) devem ser colocados no Classroom.
 - Nenhum relatório será necessário.
 - Os programas devem funcionar em um ambiente diferente respeitando as mesmas regras.
+
+## Problemas Recorrentes
+## TIAGo Iniciando não orientado
+O problema parece ter relação com a movimentação de posicionamento do braço robótico. Para evitar a orientação, é possível alterar o arquivo de launch do TIAGo, ajustando sua orientação `x` na inicialização.
+No diretório `/tiago_public_ws/src/tiago_simulation/tiago_gazebo/launch`, alterar o arquivo `tiago_gazebo.launch`.
+
+```bash
+sudo nano tiago_gazebo.launch
+```
+
+E alterar a linha de `gzpose` para:
+```xml
+<arg name="gzpose" default="-x -0.5 -y 0.0 -z 0.0 -R 0.0 -P 0.0 -Y 0.0"/>
+```

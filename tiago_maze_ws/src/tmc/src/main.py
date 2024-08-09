@@ -16,6 +16,7 @@ LASER_SUB_TOPIC = '/scan_raw'
 BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
 BASE_ORIENT_TOPIC = '/mobile_base_controller/odom'
 HEAD_CONTROLLER_TOPIC = '/head_controller/command'
+ARM_CONTROLLER_TOPIC = '/arm_controller/command'
 # Action Controller
 HEAD_ACTION_TOPIC = '/head_controller/point_head_action'
 
@@ -52,6 +53,11 @@ class myRobot():
             Twist,
             queue_size=1,
         )
+        self.arm_pub = rospy.Publisher(
+            ARM_CONTROLLER_TOPIC,
+            JointTrajectory,
+            queue_size=1,
+        )
         # Publisher cabeca
         self.head_pub = rospy.Publisher(
             HEAD_CONTROLLER_TOPIC,
@@ -62,7 +68,6 @@ class myRobot():
             HEAD_ACTION_TOPIC,
             PointHeadAction,
         )
-        # self._adjust_pose()
 
     def callback_odometry(self, msg):
         quat = msg.pose.pose.orientation
@@ -137,6 +142,96 @@ class myRobot():
             if move < 0.01:
                 move = 0.01
             self.move_base(x=move)
+
+    def move_arm(
+        self,
+        joint1=0.0,
+        joint2=0.0,
+        joint3=0.0,
+        joint4=0.0,
+        joint5=0.0,
+        joint6=0.0,
+        joint7=0.0,
+    ):
+        """Moves the TIAGo arm to the given joint configuration"""
+        cmd = JointTrajectory()
+        cmd.joint_names.extend([
+            'arm_1_joint',
+            'arm_2_joint',
+            'arm_3_joint',
+            'arm_4_joint',
+            'arm_5_joint',
+            'arm_6_joint',
+            'arm_7_joint',
+        ])
+        point = JointTrajectoryPoint()
+        point.positions = [
+            joint1,
+            joint2,
+            joint3,
+            joint4,
+            joint5,
+            joint6,
+            joint7,
+        ]
+        point.time_from_start = rospy.Duration(1)
+        cmd.points.append(point)
+        rate = rospy.Rate(1)
+        self.arm_pub.publish(cmd)
+        rate.sleep()
+
+    def move_arm_trajectory(self, list_poses):
+        """Moves the TIAGo arm through the
+        list of joint positions.
+
+        Args:
+            list_poses (List[float]): List of 7 floats,
+            representing the joint positions.
+        """
+        cmd = JointTrajectory()
+        cmd.joint_names.extend([
+            'arm_1_joint',
+            'arm_2_joint',
+            'arm_3_joint',
+            'arm_4_joint',
+            'arm_5_joint',
+            'arm_6_joint',
+            'arm_7_joint',
+        ])
+        rate = rospy.Rate(1)
+        point = JointTrajectoryPoint()
+        point.positions = [0] * 7
+        cmd.points.append(point)
+        i = 0
+        while i < len(list_poses):
+            pose = list_poses[i]
+            cmd.points[0].positions = pose
+            point.time_from_start = rospy.Duration(i + 1)
+            self.arm_pub.publish(cmd)
+            rate.sleep()
+            rospy.sleep(0.5)
+            i += 1
+
+    def wave_arm(self):
+        """Makes the TIAGo wave its arm above its head.
+        """
+        jointvalues = [
+            [-0.8, 0.8, 0.0, 0.0, 1.5, 0.2, 0.0],
+            [-0.8, 0.8, 0.0, -0.8, 1.5, 1.0, 0.0]
+        ]
+        i = 0
+        for i in range(6):
+            if i % 2 == 0:
+                self.move_arm(*jointvalues[0])
+            else:
+                self.move_arm(*jointvalues[1])
+            rospy.sleep(0.5)
+
+    def arm_initial_pose(self):
+        """Puts the TIAGo arm back to the initial position.
+        """
+        joint_values = [0.199, -1.338, -0.199, 1.937, -1.570, 1.369, 1.375]
+        self.move_arm(*joint_values)
 
     def move_head_action(self, x=1.0, y=0.0, z=1.1, block=False):
         """Moves the TIAGo head to a given x, y, z point.
@@ -250,10 +345,15 @@ if __name__ == '__main__':
     rospy.sleep(0.5)
 
     state = 0
+    tiago.turn()
+    rospy.sleep(0.5)
+    tiago.turn()
+    tiago.wave_arm()
+    tiago.arm_initial_pose()
+    tiago.turn()
+    rospy.sleep(0.5)
+    tiago.turn()
     # while not rospy.is_shutdown():
-    # # tiago.move_straight()
-    tiago.turn(right=True)
-    # rospy.spin()
      # if state == 0:
         # decision
         # compute next state

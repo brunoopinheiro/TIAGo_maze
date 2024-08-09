@@ -39,7 +39,7 @@ Cada etapa deve ser validada pelo professor
 - [X] Realizar as rotações da base móvel.
 - [X] Realizar as rotações da cabeça.
 - [ ] Processar as imagens.
-- [ ] Controlar o braço para fazer um sinal
+- [X] Controlar o braço para fazer um sinal
 - [ ] Implementar uma maquina de estado.
 
 ## Thresholding

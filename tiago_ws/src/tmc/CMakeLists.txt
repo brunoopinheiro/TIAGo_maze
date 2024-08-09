@@ -71,7 +71,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   standard_msgs
+#   std_msgs  # Or other packages containing msgs
 # )
 
 ################################################
@@ -106,7 +106,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES tmc
-#  CATKIN_DEPENDS roscpp rospy standard_msgs
+#  CATKIN_DEPENDS rospy
 #  DEPENDS system_lib
 )
 

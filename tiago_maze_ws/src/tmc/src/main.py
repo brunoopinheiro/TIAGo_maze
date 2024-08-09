@@ -195,26 +195,48 @@ class myRobot():
         self.head_pub.publish(cmd)
         rate.sleep()
 
-    def turn(self, left=False):
-        # yaw -> 3 a -3
-        modifier = 1.5
-        move = 0.1
-        if left is False:
-            modifier = -1.5
-            move = -0.1
-        initial_value = self.yaw
-        desired_value = initial_value + modifier
-        if desired_value > 3:
+    def __turn_left(self):
+        """Turns the TIAGo robot 90º to the left.
+        The function takes the inner refference of
+        the `yaw` value, obtained through the
+        odometry subscriber and sends a Twist
+        message to the Base Publisher to move the
+        Yaw at a fixed velocity."""
+        init_v = self.yaw
+        target_v = init_v + 1.5
+        if target_v > 3:
             diff = 3 - self.yaw
-            modifier = 1.5 - diff
-            desired_value = -3 + modifier
-        if desired_value < -3:
+            modf = 1.5 - diff
+            target_v = -3 + modf
+        while abs(target_v - self.yaw) > 0.01:
+            self.move_base(yaw=0.3)
+
+    def __turn_right(self):
+        """Turns the TIAGo robot 90º to the right.
+        The function takes the inner refference of
+        the `yaw` value, obtained through the
+        odometry subscriber and sends a Twist
+        message to the Base Publisher to move the
+        Yaw at a fixed velocity."""
+        init_v = self.yaw
+        target_v = init_v - 1.5
+        if target_v < -3:
             diff = -3 + self.yaw
-            modifier = -1.5 + diff
-            desired_value = 3 - modifier
-        while round(self.yaw, 2) != desired_value:
-            print(f'Yaw: {self.yaw} :: {desired_value}')
-            self.move_base(yaw=move)
+            modf = -1.5 + diff
+            target_v = 3 - modf
+        while abs(target_v - self.yaw) > 0.01:
+            self.move_base(yaw=-0.3)
+
+    def turn(self, right=False):
+        """Turns the TIAGo robot 90º to the left or right.
+
+        Args:
+            right (bool, optional): Defaults to False.
+        """
+        if right is True:
+            self.__turn_right()
+        else:
+            self.__turn_left()
 
     def decision(self):
         print('decision')
@@ -224,13 +246,13 @@ class myRobot():
 if __name__ == '__main__':
 
     rospy.init_node('tiago_controller_rria')
-
     tiago = myRobot()
+    rospy.sleep(0.5)
 
     state = 0
     # while not rospy.is_shutdown():
     # # tiago.move_straight()
-    tiago.turn(left=False)
+    tiago.turn(right=True)
     # rospy.spin()
      # if state == 0:
         # decision

@@ -315,37 +315,44 @@ class myRobot():
             self.__turn_left()
 
     def decision(self):
+        """TIAGo decision state.
+        Updates its internal (simplified) State Machine
+        to indicate the next action it should do at his
+        loop's next iteration.
+        """
         frontwall = self.v0
         leftwall = self.v90
         rightwall = self.v270
-        rospy.loginfo(f'Maze: {self.state}')
-        rospy.loginfo(f'Decision: Walls [{leftwall}, {frontwall}, {rightwall}]')
+        rospy.loginfo(f'State: {self.state}')
+        rospy.loginfo(f'Maze: {self.inside_the_maze}')
+        rospy.loginfo(f'Walls: [{leftwall}, {frontwall}, {rightwall}]')
         if not self.inside_the_maze:
-            rospy.loginfo('Move Straight')
+            rospy.loginfo('Decision: Move Straight')
             self.state = TIAGoState.MOVE_STRAIGHT
             return
-        elif (leftwall is inf
-              and rightwall is inf
+        elif (leftwall == inf
+              and rightwall == inf
               and self.inside_the_maze is True):
-            rospy.loginfo('Finish')
+            rospy.loginfo('Decision: Finish')
             self.state = TIAGoState.FINISH
             return
         elif (frontwall is not inf
               and (leftwall is not inf
                    or rightwall is not inf)):
             if frontwall > 1.0:
+                rospy.loginfo('Decision: Move Straight')
                 self.state = TIAGoState.MOVE_STRAIGHT
                 return
             elif leftwall < 1.0:
-                rospy.loginfo('Turn Right')
+                rospy.loginfo('Decision: Turn Right')
                 self.state = TIAGoState.TURN_RIGHT
                 return
             elif rightwall < 1.0:
-                rospy.loginfo('Turn Left')
+                rospy.loginfo('Decision: Turn Left')
                 self.state = TIAGoState.TURN_LEFT
                 return
             else:
-                rospy.loginfo('Camera Decision')
+                rospy.loginfo('Decision: Camera Decision')
                 self.state = TIAGoState.CAMERA_DECISION
                 return
 

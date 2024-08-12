@@ -130,6 +130,9 @@ class myRobot():
         new_pose.angular.z = yaw
         self.base_pub.publish(new_pose)
 
+    def __detect_collision(self):
+        pass
+
     def move_straight(self, wall_limit=0.6):
         """Moves the TIAGo robot in a straight line until
         it reaches 0.7 meters from a wall, detected by its
@@ -144,8 +147,8 @@ class myRobot():
         threshold = wall_limit
         while (self.v0 - threshold) > 0:
             move = self.v0 - threshold
-            if move > 0.3:
-                move = 0.3
+            if move > 0.4:
+                move = 0.4
             if move < 0.01:
                 move = 0.01
             self.move_base(x=move)
@@ -271,6 +274,15 @@ class myRobot():
         self.head_pub.publish(cmd)
         rate.sleep()
 
+    def __find_signs(self):
+        self.move_head(joint_1=-1.5)
+        rospy.loginfo('Capture Image')
+        self.move_head(joint_1=1.5)
+        self.move_head(joint_1=0.0)
+
+    def camera_detection(self):
+        self.__find_signs()
+
     def __turn_left(self):
         """Turns the TIAGo robot 90º to the left.
         The function takes the inner refference of
@@ -284,8 +296,12 @@ class myRobot():
             diff = 3 - self.yaw
             modf = 1.5 - diff
             target_v = -3 + modf
-        while abs(target_v - self.yaw) > 0.01:
-            self.move_base(yaw=0.3)
+        while abs(target_v - self.yaw) > 0.35:
+            self.move_base(yaw=0.35)
+        while abs(target_v - self.yaw) > 0.1:
+            self.move_base(yaw=0.1)
+        while abs(target_v - self.yaw) > 0.005:
+            self.move_base(yaw=0.005)
 
     def __turn_right(self):
         """Turns the TIAGo robot 90º to the right.
@@ -300,8 +316,12 @@ class myRobot():
             diff = -3 + self.yaw
             modf = -1.5 + diff
             target_v = 3 - modf
-        while abs(target_v - self.yaw) > 0.01:
-            self.move_base(yaw=-0.3)
+        while abs(target_v - self.yaw) > 0.35:
+            self.move_base(yaw=-0.35)
+        while abs(target_v - self.yaw) > 0.1:
+            self.move_base(yaw=-0.1)
+        while abs(target_v - self.yaw) > 0.005:
+            self.move_base(yaw=-0.005)
 
     def turn(self, right=False):
         """Turns the TIAGo robot 90º to the left or right.
@@ -371,6 +391,7 @@ if __name__ == '__main__':
         elif tiago.state == TIAGoState.CAMERA_DECISION:
             # image porcessing
             # compute next state
+            tiago.camera_detection()
             tiago.turn()
             tiago.move_straight()
             tiago.decision()

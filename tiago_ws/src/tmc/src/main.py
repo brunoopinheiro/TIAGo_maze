@@ -2,14 +2,13 @@
 
 import rospy
 from math import inf, radians
+from enum import Enum
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from typing import Tuple
 from tf.transformations import euler_from_quaternion
-from control_msgs.msg import PointHeadAction, PointHeadGoal
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from actionlib import SimpleActionClient
 
 
 LASER_SUB_TOPIC = '/scan_raw'
@@ -17,8 +16,16 @@ BASE_CONT_TOPIC = '/mobile_base_controller/cmd_vel'
 BASE_ORIENT_TOPIC = '/mobile_base_controller/odom'
 HEAD_CONTROLLER_TOPIC = '/head_controller/command'
 ARM_CONTROLLER_TOPIC = '/arm_controller/command'
-# Action Controller
-HEAD_ACTION_TOPIC = '/head_controller/point_head_action'
+
+
+class TIAGoState(Enum):
+
+    IDLE = 0
+    CAMERA_DECISION = 1
+    MOVE_STRAIGHT = 2
+    TURN_RIGHT = 3
+    TURN_LEFT = 4
+    FINISH = 5
 
 
 class myRobot():
@@ -28,6 +35,8 @@ class myRobot():
         return (self.v270, self.v0, self.v90)
 
     def __init__(self):
+        self.state = TIAGoState.IDLE
+        self.inside_the_maze = False
         # Subscriber odometria
         self.sub_odom = rospy.Subscriber(
             BASE_ORIENT_TOPIC,
@@ -63,10 +72,6 @@ class myRobot():
             HEAD_CONTROLLER_TOPIC,
             JointTrajectory,
             queue_size=1,
-        )
-        self.head_ac = SimpleActionClient(
-            HEAD_ACTION_TOPIC,
-            PointHeadAction,
         )
 
     def callback_odometry(self, msg):
@@ -125,7 +130,7 @@ class myRobot():
         new_pose.angular.z = yaw
         self.base_pub.publish(new_pose)
 
-    def move_straight(self, wall_limit=0.7):
+    def move_straight(self, wall_limit=0.6):
         """Moves the TIAGo robot in a straight line until
         it reaches 0.7 meters from a wall, detected by its
         scan (oriented by its 0 degrees laser).
@@ -134,6 +139,8 @@ class myRobot():
             wall_limit (float, optional): Distance from the wall.
             Defaults to 0.7
         """
+        if not self.inside_the_maze:
+            self.inside_the_maze = True
         threshold = wall_limit
         while (self.v0 - threshold) > 0:
             move = self.v0 - threshold
@@ -233,32 +240,6 @@ class myRobot():
         joint_values = [0.199, -1.338, -0.199, 1.937, -1.570, 1.369, 1.375]
         self.move_arm(*joint_values)
 
-    def move_head_action(self, x=1.0, y=0.0, z=1.1, block=False):
-        """Moves the TIAGo head to a given x, y, z point.
-        The y value makes the TIAGo look to the left or right.
-        A negative value means left, a positive value means right.
-        Args:
-            x (float, optional): Foward. Defaults to 1.0.
-            y (float, optional): Left/Right. Defaults to 0.0.
-            z (float, optional): Height. Defaults to 1.1.
-            block (bool, optional): Blocks the code.
-        """
-        rospy.sleep(0.5)
-        goal = PointHeadGoal()
-        goal.pointing_frame = 'xtion_optical_frame'
-        goal.pointing_axis.z = 1.0
-        goal.max_velocity = 1.5
-        goal.min_duration = rospy.Duration(0.5)
-        goal.target.header.frame_id = 'base_link'
-        goal.target.point.x = x
-        goal.target.point.y = y
-        goal.target.point.z = z
-        if block is False:
-            self.head_ac.send_goal(goal)
-        else:
-            self.head_ac.send_goal_and_wait(goal)
-        rospy.sleep(0.5)
-
     def move_head(self, joint_1=0.0, joint_2=0.0):
         """Moves the TIAGo head horizontally and/or vertically.
 
@@ -334,8 +315,39 @@ class myRobot():
             self.__turn_left()
 
     def decision(self):
-        print('decision')
-        #
+        frontwall = self.v0
+        leftwall = self.v90
+        rightwall = self.v270
+        rospy.loginfo(f'Maze: {self.state}')
+        rospy.loginfo(f'Decision: Walls [{leftwall}, {frontwall}, {rightwall}]')
+        if not self.inside_the_maze:
+            rospy.loginfo('Move Straight')
+            self.state = TIAGoState.MOVE_STRAIGHT
+            return
+        elif (leftwall is inf
+              and rightwall is inf
+              and self.inside_the_maze is True):
+            rospy.loginfo('Finish')
+            self.state = TIAGoState.FINISH
+            return
+        elif (frontwall is not inf
+              and (leftwall is not inf
+                   or rightwall is not inf)):
+            if frontwall > 1.0:
+                self.state = TIAGoState.MOVE_STRAIGHT
+                return
+            elif leftwall < 1.0:
+                rospy.loginfo('Turn Right')
+                self.state = TIAGoState.TURN_RIGHT
+                return
+            elif rightwall < 1.0:
+                rospy.loginfo('Turn Left')
+                self.state = TIAGoState.TURN_LEFT
+                return
+            else:
+                rospy.loginfo('Camera Decision')
+                self.state = TIAGoState.CAMERA_DECISION
+                return
 
 
 if __name__ == '__main__':
@@ -344,25 +356,30 @@ if __name__ == '__main__':
     tiago = myRobot()
     rospy.sleep(0.5)
 
-    state = 0
-    tiago.turn()
-    rospy.sleep(0.5)
-    tiago.turn()
-    tiago.wave_arm()
-    tiago.arm_initial_pose()
-    tiago.turn()
-    rospy.sleep(0.5)
-    tiago.turn()
-    # while not rospy.is_shutdown():
-     # if state == 0:
-        # decision
-        # compute next state
-     # else if state == 1
-        # image porcessing
-        # compute next state
-     # else if state == 3
-        # move straight
-        # compute next state
-     # else if state == 4
-        # turn
-        # compute next state
+    finish = False
+    while not rospy.is_shutdown() and not finish:
+    # for _ in range(5):
+        if tiago.state == TIAGoState.IDLE:
+            tiago.decision()
+        elif tiago.state == TIAGoState.CAMERA_DECISION:
+            # image porcessing
+            # compute next state
+            tiago.turn()
+            tiago.move_straight()
+            tiago.decision()
+        elif tiago.state == TIAGoState.MOVE_STRAIGHT:
+            tiago.move_straight()
+            tiago.decision()
+        elif tiago.state == TIAGoState.TURN_RIGHT:
+            tiago.turn(right=True)
+            tiago.decision()
+        elif tiago.state == TIAGoState.TURN_LEFT:
+            tiago.turn()  # defaults left
+            tiago.decision()
+        elif tiago.state == TIAGoState.FINISH:
+            tiago.wave_arm()
+            tiago.arm_initial_pose()
+            tiago.turn(right=True)
+            tiago.turn(right=False)
+            finish = True
+            tiago.decision()

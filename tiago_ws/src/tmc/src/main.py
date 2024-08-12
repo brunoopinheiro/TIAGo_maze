@@ -9,6 +9,7 @@ from sensor_msgs.msg import LaserScan
 from typing import Tuple
 from tf.transformations import euler_from_quaternion
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+from tmc.srv import ProcessImg, ProcessImgRequest
 
 
 LASER_SUB_TOPIC = '/scan_raw'
@@ -131,9 +132,14 @@ class myRobot():
         self.base_pub.publish(new_pose)
 
     def __detect_collision(self):
-        pass
+        leftwall = self.v90
+        rightwall = self.v270
+        if leftwall < 0.5:
+            self.move_base(yaw=-0.1)
+        elif rightwall < 0.5:
+            self.move_base(yaw=0.1)
 
-    def move_straight(self, wall_limit=0.6):
+    def move_straight(self, wall_limit=0.75):
         """Moves the TIAGo robot in a straight line until
         it reaches 0.7 meters from a wall, detected by its
         scan (oriented by its 0 degrees laser).
@@ -152,6 +158,7 @@ class myRobot():
             if move < 0.01:
                 move = 0.01
             self.move_base(x=move)
+            self.__detect_collision()
 
     def move_arm(
         self,
@@ -274,15 +281,6 @@ class myRobot():
         self.head_pub.publish(cmd)
         rate.sleep()
 
-    def __find_signs(self):
-        self.move_head(joint_1=-1.5)
-        rospy.loginfo('Capture Image')
-        self.move_head(joint_1=1.5)
-        self.move_head(joint_1=0.0)
-
-    def camera_detection(self):
-        self.__find_signs()
-
     def __turn_left(self):
         """Turns the TIAGo robot 90º to the left.
         The function takes the inner refference of
@@ -300,8 +298,6 @@ class myRobot():
             self.move_base(yaw=0.35)
         while abs(target_v - self.yaw) > 0.1:
             self.move_base(yaw=0.1)
-        while abs(target_v - self.yaw) > 0.005:
-            self.move_base(yaw=0.005)
 
     def __turn_right(self):
         """Turns the TIAGo robot 90º to the right.
@@ -317,11 +313,9 @@ class myRobot():
             modf = -1.5 + diff
             target_v = 3 - modf
         while abs(target_v - self.yaw) > 0.35:
-            self.move_base(yaw=-0.35)
+            self.move_base(yaw=-0.4)
         while abs(target_v - self.yaw) > 0.1:
-            self.move_base(yaw=-0.1)
-        while abs(target_v - self.yaw) > 0.005:
-            self.move_base(yaw=-0.005)
+            self.move_base(yaw=-0.15)
 
     def turn(self, right=False):
         """Turns the TIAGo robot 90º to the left or right.
@@ -334,6 +328,38 @@ class myRobot():
         else:
             self.__turn_left()
 
+    def camera_detection(self):
+        # green 1 red 2 nothing 0
+        # move head left
+        left = 0
+        right = 0
+        rospy.wait_for_service("/camera_service")
+        try:
+            camera_call = rospy.ServiceProxy("/camera_service", ProcessImg)
+            request = ProcessImgRequest()
+        except Exception as e:
+            rospy.logerr(e)
+        self.move_head(joint_1=-1.5)
+        rospy.sleep(0.5)
+        res = camera_call(request)
+        left = res.result
+        # move head right
+        self.move_head(joint_1=1.5)
+        rospy.sleep(0.5)
+        res = camera_call(request)
+        right = res.result
+        # center head
+        self.move_head(joint_1=0.0)
+        rospy.loginfo(f'LEFT: {left} RIGHT: {right}')
+        if left == 2:
+            rospy.loginfo('Turning Left')
+            self.__turn_left()
+            self.move_straight()
+        elif right == 2:
+            rospy.loginfo('Turning Right')
+            self.__turn_right()
+            self.move_straight()
+
     def decision(self):
         """TIAGo decision state.
         Updates its internal (simplified) State Machine
@@ -343,7 +369,7 @@ class myRobot():
         frontwall = self.v0
         leftwall = self.v90
         rightwall = self.v270
-        rospy.loginfo(f'State: {self.state}')
+        rospy.loginfo(f'State: {self.state.name}')
         rospy.loginfo(f'Maze: {self.inside_the_maze}')
         rospy.loginfo(f'Walls: [{leftwall}, {frontwall}, {rightwall}]')
         if not self.inside_the_maze:
@@ -383,17 +409,15 @@ if __name__ == '__main__':
     tiago = myRobot()
     rospy.sleep(0.5)
 
+    tiago.move_head(joint_1=0.0)
     finish = False
     while not rospy.is_shutdown() and not finish:
-    # for _ in range(5):
         if tiago.state == TIAGoState.IDLE:
             tiago.decision()
         elif tiago.state == TIAGoState.CAMERA_DECISION:
             # image porcessing
-            # compute next state
             tiago.camera_detection()
-            tiago.turn()
-            tiago.move_straight()
+            # compute next state
             tiago.decision()
         elif tiago.state == TIAGoState.MOVE_STRAIGHT:
             tiago.move_straight()

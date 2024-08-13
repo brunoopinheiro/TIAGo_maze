@@ -37,6 +37,9 @@ rosrun tmc main.py
 
 Com isso, o **TIAGo** percorrerá o labirinto, seguindo as regras estabelecidas, e acenando com o braço ao final.
 
+## Demonstração de Execução:
+[![Watch the video](https://img.youtube.com/vi/nVJijrPe3T8/maxresdefault.jpg)](https://youtu.be/nVJijrPe3T8)
+
 ## Como organizar o código
 - Você tem que implementar essas regras nos arquivos `main.py` e `camera.py`.
 - Os dados de odometria e do laser são coletados por meio de dois subcriber no arquivo `main.py`.

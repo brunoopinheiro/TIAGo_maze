@@ -33,11 +33,6 @@ class MyCamera:
                 if self.cv_image[h, w, 1] < threshold:
                     g_count += 1
                     self.cv_image[h, w, 1] = 255
-        # TESTING:
-        print('--------------------------------------------')
-        print(g_count)
-        print('--------------------------------------------')
-        print(r_count)
         res = ProcessImgResponse()
         if r_count > 4000 and g_count < 1000:
             res.result = 1

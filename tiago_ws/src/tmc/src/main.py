@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 import rospy
-from math import inf, radians
+from math import inf, radians, pi
 from enum import Enum
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -46,6 +46,7 @@ class myRobot():
             queue_size=1,
         )
         self.yaw = 0.0
+        self.orientation = 0.0
         # Subscriber laser
         self.v90 = inf
         self.v270 = inf
@@ -76,11 +77,14 @@ class myRobot():
         )
 
     def callback_odometry(self, msg):
+        """Callback used to calculate and record
+        the robot `yaw` and `orientation` reference.
+        """
         quat = msg.pose.pose.orientation
         quat_list = [quat.x, quat.y, quat.z, quat.w]
         (_, _, yaw) = euler_from_quaternion(quat_list)
         self.yaw = yaw
-        # Armazenar os dados de odometria
+        self.orientation = yaw*180/pi
 
     def __idx_from_angle(self, angle, msg):
         """Receives an angle and the message, and calculates
@@ -132,12 +136,15 @@ class myRobot():
         self.base_pub.publish(new_pose)
 
     def __detect_collision(self):
+        """Slightly rotates the robot mobile base trying
+        to avoid imediate collisions.
+        """
         leftwall = self.v90
         rightwall = self.v270
-        if leftwall < 0.5:
-            self.move_base(yaw=-0.1)
-        elif rightwall < 0.5:
-            self.move_base(yaw=0.1)
+        if leftwall < 0.4:
+            self.move_base(yaw=-0.2)
+        elif rightwall < 0.4:
+            self.move_base(yaw=0.2)
 
     def move_straight(self, wall_limit=0.75):
         """Moves the TIAGo robot in a straight line until
@@ -153,8 +160,8 @@ class myRobot():
         threshold = wall_limit
         while (self.v0 - threshold) > 0:
             move = self.v0 - threshold
-            if move > 0.4:
-                move = 0.4
+            if move > 0.35:
+                move = 0.35
             if move < 0.01:
                 move = 0.01
             self.move_base(x=move)
@@ -282,40 +289,28 @@ class myRobot():
         rate.sleep()
 
     def __turn_left(self):
-        """Turns the TIAGo robot 90º to the left.
+        """Turns the TIAGo robot aprox. 90º to the left.
         The function takes the inner refference of
-        the `yaw` value, obtained through the
+        the `orientation` value, obtained through the
         odometry subscriber and sends a Twist
         message to the Base Publisher to move the
         Yaw at a fixed velocity."""
-        init_v = self.yaw
-        target_v = init_v + 1.5
-        if target_v > 3:
-            diff = 3 - self.yaw
-            modf = 1.5 - diff
-            target_v = -3 + modf
-        while abs(target_v - self.yaw) > 0.35:
-            self.move_base(yaw=0.35)
-        while abs(target_v - self.yaw) > 0.1:
-            self.move_base(yaw=0.1)
+        init_v = self.orientation
+        target_v = init_v + 90
+        while self.orientation < target_v:
+            self.move_base(yaw=0.2)
 
     def __turn_right(self):
-        """Turns the TIAGo robot 90º to the right.
+        """Turns the TIAGo robot aprox. 90º to the right.
         The function takes the inner refference of
-        the `yaw` value, obtained through the
+        the `orientation` value, obtained through the
         odometry subscriber and sends a Twist
         message to the Base Publisher to move the
         Yaw at a fixed velocity."""
-        init_v = self.yaw
-        target_v = init_v - 1.5
-        if target_v < -3:
-            diff = -3 + self.yaw
-            modf = -1.5 + diff
-            target_v = 3 - modf
-        while abs(target_v - self.yaw) > 0.35:
-            self.move_base(yaw=-0.4)
-        while abs(target_v - self.yaw) > 0.1:
-            self.move_base(yaw=-0.15)
+        init_v = self.orientation
+        target_v = init_v - 90
+        while self.orientation > target_v:
+            self.move_base(yaw=-0.2)
 
     def turn(self, right=False):
         """Turns the TIAGo robot 90º to the left or right.
@@ -329,8 +324,20 @@ class myRobot():
             self.__turn_left()
 
     def camera_detection(self):
-        # green 1 red 2 nothing 0
-        # move head left
+        """Moves the TIAGo head to the left and right,
+        taking pictures using the Camera Service to try
+        to detect a green poster at the wall, which indicates
+        which direction it should move to.
+
+        The camera service returns `2` if detects green at
+        the image, `1` if detects red, or `0` if none of those
+        colors where detected.
+
+        Based on this result, this function indicates
+        which direction the robot should turn, and commands it
+        to move straight after the turn.
+        """
+        # green 2 red 1 nothing 0
         left = 0
         right = 0
         rospy.wait_for_service("/camera_service")
@@ -339,6 +346,7 @@ class myRobot():
             request = ProcessImgRequest()
         except Exception as e:
             rospy.logerr(e)
+        # move head left
         self.move_head(joint_1=-1.5)
         rospy.sleep(0.5)
         res = camera_call(request)
@@ -350,13 +358,12 @@ class myRobot():
         right = res.result
         # center head
         self.move_head(joint_1=0.0)
-        rospy.loginfo(f'LEFT: {left} RIGHT: {right}')
         if left == 2:
-            rospy.loginfo('Turning Left')
+            rospy.loginfo('Decision: Turning Left')
             self.__turn_left()
             self.move_straight()
         elif right == 2:
-            rospy.loginfo('Turning Right')
+            rospy.loginfo('Decision: Turning Right')
             self.__turn_right()
             self.move_straight()
 
@@ -415,9 +422,7 @@ if __name__ == '__main__':
         if tiago.state == TIAGoState.IDLE:
             tiago.decision()
         elif tiago.state == TIAGoState.CAMERA_DECISION:
-            # image porcessing
             tiago.camera_detection()
-            # compute next state
             tiago.decision()
         elif tiago.state == TIAGoState.MOVE_STRAIGHT:
             tiago.move_straight()
@@ -431,7 +436,5 @@ if __name__ == '__main__':
         elif tiago.state == TIAGoState.FINISH:
             tiago.wave_arm()
             tiago.arm_initial_pose()
-            tiago.turn(right=True)
-            tiago.turn(right=False)
             finish = True
             tiago.decision()

@@ -22,6 +22,21 @@ laser.
     - Se não houver pôster, o robô cumpriu a missão
 7. Após completar sua missão, o robô deve fazer um sinal com o braço.
 
+## Executando o código
+Depois de iniciado corretamente o simulador **Gazebo** com o **TIAGo** frente ao labirinto, será necessário executar dois arquivos. Um, inicia o serviço da câmera do TIAGo, e o outro, executa o código principal do robô. Lembre-se sempre de ativar o `devel` do workspace `/tiago_ws` (dentro do diretório do projeto) antes de executar os arquivos.
+
+### Iniciando o serviço da câmera
+```bash
+rosrun tmc camera.py
+```
+
+### Executando o código principal
+```bash
+rosrun tmc main.py
+```
+
+Com isso, o **TIAGo** percorrerá o labirinto, seguindo as regras estabelecidas, e acenando com o braço ao final.
+
 ## Como organizar o código
 - Você tem que implementar essas regras nos arquivos `main.py` e `camera.py`.
 - Os dados de odometria e do laser são coletados por meio de dois subcriber no arquivo `main.py`.
@@ -38,9 +53,9 @@ Cada etapa deve ser validada pelo professor
 - [X] Fornecer a orientação do robô (o valor deve ser contı́nuo).
 - [X] Realizar as rotações da base móvel.
 - [X] Realizar as rotações da cabeça.
-- [ ] Processar as imagens.
+- [X] Processar as imagens.
 - [X] Controlar o braço para fazer um sinal
-- [ ] Implementar uma maquina de estado.
+- [X] Implementar uma maquina de estado.
 
 ## Thresholding
 - No processamento de imagem digital, o thresholding é o método mais simples de segmentar imagens.

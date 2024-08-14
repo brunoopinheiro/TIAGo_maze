@@ -366,6 +366,11 @@ class myRobot():
             rospy.loginfo('Decision: Turning Right')
             self.__turn_right()
             self.move_straight()
+        elif left == 0 and right == 0:
+            self.state = TIAGoState.FINISH
+            tiago.wave_arm()
+            tiago.arm_initial_pose()
+            rospy.loginfo('Decision: Finish')
 
     def decision(self):
         """TIAGo decision state.
@@ -379,15 +384,11 @@ class myRobot():
         rospy.loginfo(f'State: {self.state.name}')
         rospy.loginfo(f'Maze: {self.inside_the_maze}')
         rospy.loginfo(f'Walls: [{leftwall}, {frontwall}, {rightwall}]')
+        if tiago.state == TIAGoState.FINISH:
+            return
         if not self.inside_the_maze:
             rospy.loginfo('Decision: Move Straight')
             self.state = TIAGoState.MOVE_STRAIGHT
-            return
-        elif (leftwall == inf
-              and rightwall == inf
-              and self.inside_the_maze is True):
-            rospy.loginfo('Decision: Finish')
-            self.state = TIAGoState.FINISH
             return
         elif (frontwall is not inf
               and (leftwall is not inf
@@ -416,9 +417,9 @@ if __name__ == '__main__':
     tiago = myRobot()
     rospy.sleep(0.5)
 
+    # resets TIAGo head position
     tiago.move_head(joint_1=0.0)
-    finish = False
-    while not rospy.is_shutdown() and not finish:
+    while not rospy.is_shutdown() and not tiago.state == TIAGoState.FINISH:
         if tiago.state == TIAGoState.IDLE:
             tiago.decision()
         elif tiago.state == TIAGoState.CAMERA_DECISION:
@@ -432,9 +433,4 @@ if __name__ == '__main__':
             tiago.decision()
         elif tiago.state == TIAGoState.TURN_LEFT:
             tiago.turn()  # defaults left
-            tiago.decision()
-        elif tiago.state == TIAGoState.FINISH:
-            tiago.wave_arm()
-            tiago.arm_initial_pose()
-            finish = True
             tiago.decision()

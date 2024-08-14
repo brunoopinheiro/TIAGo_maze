@@ -22,6 +22,12 @@ class MyCamera:
         self.height = 0
 
     def callback_ServiceCamera(self, request):
+        """ Callback used to detect green and red signs.
+        It takes the image stored by the camera subscriber callback
+        and counts the number of pixels satisfying certain conditions
+        that relate with the intensity of red and green in each one of them.
+        """
+
         threshold = 60
         r_count = 0
         g_count = 0
@@ -29,15 +35,8 @@ class MyCamera:
             for h in range(self.height):
                 if self.cv_image[h, w, 2] < threshold:
                     r_count += 1
-                    self.cv_image[h, w, 2] = 255
                 if self.cv_image[h, w, 1] < threshold:
                     g_count += 1
-                    self.cv_image[h, w, 1] = 255
-        # TESTING:
-        print('--------------------------------------------')
-        print(g_count)
-        print('--------------------------------------------')
-        print(r_count)
         res = ProcessImgResponse()
         if r_count > 4000 and g_count < 1000:
             res.result = 1
@@ -50,6 +49,9 @@ class MyCamera:
             return res.result
 
     def callback_SubscribeCamera(self, msg):
+        """ Callback of the camera subscriber, used to receive an
+        image from TIAgo, resize it and store it. 
+        """
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         except CvBridgeError as e:

@@ -296,9 +296,9 @@ class myRobot():
         message to the Base Publisher to move the
         Yaw at a fixed velocity."""
         init_v = self.orientation
-        target_v = init_v + 90
+        target_v = init_v + 89
         while self.orientation < target_v:
-            self.move_base(yaw=0.2)
+            self.move_base(yaw=0.21)
 
     def __turn_right(self):
         """Turns the TIAGo robot aprox. 90º to the right.
@@ -308,9 +308,9 @@ class myRobot():
         message to the Base Publisher to move the
         Yaw at a fixed velocity."""
         init_v = self.orientation
-        target_v = init_v - 90
+        target_v = init_v - 89
         while self.orientation > target_v:
-            self.move_base(yaw=-0.2)
+            self.move_base(yaw=-0.21)
 
     def turn(self, right=False):
         """Turns the TIAGo robot 90º to the left or right.
@@ -384,7 +384,7 @@ class myRobot():
         rospy.loginfo(f'State: {self.state.name}')
         rospy.loginfo(f'Maze: {self.inside_the_maze}')
         rospy.loginfo(f'Walls: [{leftwall}, {frontwall}, {rightwall}]')
-        if tiago.state == TIAGoState.FINISH:
+        if self.state == TIAGoState.FINISH:
             return
         if not self.inside_the_maze:
             rospy.loginfo('Decision: Move Straight')
@@ -397,11 +397,11 @@ class myRobot():
                 rospy.loginfo('Decision: Move Straight')
                 self.state = TIAGoState.MOVE_STRAIGHT
                 return
-            elif leftwall < 1.0:
+            elif leftwall < 1.5:
                 rospy.loginfo('Decision: Turn Right')
                 self.state = TIAGoState.TURN_RIGHT
                 return
-            elif rightwall < 1.0:
+            elif rightwall < 1.5:
                 rospy.loginfo('Decision: Turn Left')
                 self.state = TIAGoState.TURN_LEFT
                 return
